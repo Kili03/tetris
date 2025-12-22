@@ -7,6 +7,17 @@ HEIGHT = 21
 BLOCK_SYMBOL = "██"
 BLOCK_WIDTH = 2
 
+
+COLOR_MAP: dict[str, int] = {
+    "cyan": 1,
+    "blue": 2,
+    "magenta": 3,
+    "yellow": 4,
+    "green": 5,
+    "red": 6,
+    "white": 7
+}
+
 BLOCK_MASKS: dict[TetrisBlockShape, BlockMask] = {
     TetrisBlockShape.I: (
         False, False, False, False,
@@ -53,21 +64,11 @@ BLOCK_MASKS: dict[TetrisBlockShape, BlockMask] = {
 }
 
 BLOCK_COLORS: dict[TetrisBlockShape, int] = {
-    TetrisBlockShape.I: 1,
-    TetrisBlockShape.J: 2,
-    TetrisBlockShape.L: 3,
-    TetrisBlockShape.O: 4,
-    TetrisBlockShape.S: 5,
-    TetrisBlockShape.T: 6,
-    TetrisBlockShape.Z: 7
-}
-
-COLOR_MAP: dict[str, int] = {
-    "cyan": 1,
-    "blue": 2,
-    "magenta": 3,
-    "yellow": 4,
-    "green": 5,
-    "red": 6,
-    "white": 7
+    TetrisBlockShape.I: COLOR_MAP["cyan"],
+    TetrisBlockShape.J: COLOR_MAP["blue"],
+    TetrisBlockShape.L: COLOR_MAP["magenta"],
+    TetrisBlockShape.O: COLOR_MAP["yellow"],
+    TetrisBlockShape.S: COLOR_MAP["green"],
+    TetrisBlockShape.T: COLOR_MAP["red"],
+    TetrisBlockShape.Z: COLOR_MAP["white"]
 }
