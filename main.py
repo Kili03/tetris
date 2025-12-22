@@ -326,6 +326,7 @@ def run_game(stdscr) -> None:
     stdscr.timeout(50)  # ensure that stdscr.getch() is not blocking
 
     points = 0
+    paused = False
     shapes: list[TetrisBlock] = [get_new_shape()]
     next_shape = get_new_shape()
     last_time = time.time()
@@ -336,18 +337,21 @@ def run_game(stdscr) -> None:
 
         if key == ord("q"):
             break
+        if key == ord("p"):
+            paused = not paused
 
-        next_shape, points = frame(key, shapes, next_shape, points)
+        if not paused:
+            next_shape, points = frame(key, shapes, next_shape, points)
 
-        # update frequency is based on the current number of points
-        cleared_rows = points // POINTS_PER_FULL_ROW
-        update_frequency = max(0.1, 1.0 - (cleared_rows // 10) * 0.1)
+            # update frequency is based on the current number of points
+            cleared_rows = points // POINTS_PER_FULL_ROW
+            update_frequency = max(0.1, 1.0 - (cleared_rows // 10) * 0.1)
 
-        if time.time() - last_time >= update_frequency:
-            next_shape, points = frame(curses.KEY_DOWN, shapes, next_shape, points)
-            last_time = time.time()
+            if time.time() - last_time >= update_frequency:
+                next_shape, points = frame(curses.KEY_DOWN, shapes, next_shape, points)
+                last_time = time.time()
 
-        draw(stdscr, shapes, next_shape, points)
+        draw(stdscr, shapes, next_shape, points, paused)
         time.sleep(0.01)
 
 
@@ -403,9 +407,11 @@ def draw_shape(stdscr, position: Vector2, block: BlockMask, color: int) -> None:
             )
 
 
-def draw(stdscr, shapes: list[TetrisBlock], next_shape: TetrisBlock, points: int) -> None:
+def draw(stdscr, shapes: list[TetrisBlock], next_shape: TetrisBlock, points: int, paused: bool) -> None:
     """Draws a border box, all shapes and the score."""
     stdscr.clear()
+
+    y_offset = 0
 
     try:
         draw_borders(stdscr)
@@ -415,13 +421,20 @@ def draw(stdscr, shapes: list[TetrisBlock], next_shape: TetrisBlock, points: int
             draw_shape(stdscr, shape.position, shape.block, shape.color)
 
         # score
-        stdscr.addstr(0, BLOCK_WIDTH * (WIDTH + 3), f"Points: {points}")
+        stdscr.addstr(y_offset, BLOCK_WIDTH * (WIDTH + 3), f"Points: {points}")
+
+        # paused
+        if paused:
+            y_offset += 2
+            stdscr.addstr(y_offset, BLOCK_WIDTH * (WIDTH + 3), "Paused...")
 
         # next shape: title
-        stdscr.addstr(2, BLOCK_WIDTH * (WIDTH + 3), "Next Block:")
+        y_offset += 2
+        stdscr.addstr(y_offset, BLOCK_WIDTH * (WIDTH + 3), "Next Block:")
 
         # next shape: shape
-        next_pos = Vector2(WIDTH + 2, HEIGHT - 6)
+        y_offset += 4
+        next_pos = Vector2(WIDTH + 2, HEIGHT - y_offset)
         draw_shape(stdscr, next_pos, next_shape.block, next_shape.color)
 
     except curses.error:
