@@ -28,6 +28,13 @@ I have not packaged this game. To use it, you can clone it.
 git clone https://github.com/jonahkraft/tetris.git
 ```
 
+Then use the following commands to start the game.
+
+```bash
+cd tetris
+python3 main.py
+```
+
 The game itself does not have any dependencies outside Python's standard library.  
 You can create an alias to play it from anywhere. Just add
 
@@ -35,7 +42,7 @@ You can create an alias to play it from anywhere. Just add
 alias tetris="python3 ~/path/to/tetris/main.py"
 ```
 
-to your `.bashrc` or `.zshrc` file.
+to your `.bashrc` or `.zshrc` file. Use `tetris` to start the game.
 
 ## Preview
 
