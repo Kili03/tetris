@@ -1,4 +1,5 @@
-from constants import WIDTH, HEIGHT, BLOCK_MASKS, BLOCK_COLORS, BLOCK_SYMBOL, BLOCK_WIDTH, COLOR_MAP
+from constants import WIDTH, HEIGHT, BLOCK_MASKS, BLOCK_COLORS, BLOCK_SYMBOL, BLOCK_WIDTH, COLOR_MAP, \
+    POINTS_PER_FULL_ROW
 from custom_types import TetrisBlock, Vector2, BoundingBox, BlockMask, TetrisBlockShape
 import random
 from typing import cast
@@ -284,7 +285,7 @@ def frame(key: int, shapes: list[TetrisBlock], next_shape: TetrisBlock, points: 
         num_deleted_rows = clear_full_rows(shapes)
 
         # add points
-        points += num_deleted_rows * 10
+        points += num_deleted_rows * POINTS_PER_FULL_ROW
 
         # add a new shape
         next_shape = spawn_shape(shapes, next_shape)
@@ -339,7 +340,8 @@ def run_game(stdscr) -> None:
         next_shape, points = frame(key, shapes, next_shape, points)
 
         # update frequency is based on the current number of points
-        update_frequency = max(0.1, 1.0 - (points // 100) * 0.1)
+        cleared_rows = points // POINTS_PER_FULL_ROW
+        update_frequency = max(0.1, 1.0 - (cleared_rows // 10) * 0.1)
 
         if time.time() - last_time >= update_frequency:
             next_shape, points = frame(curses.KEY_DOWN, shapes, next_shape, points)

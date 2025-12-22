@@ -7,6 +7,8 @@ HEIGHT = 21
 BLOCK_SYMBOL = "██"
 BLOCK_WIDTH = 2
 
+POINTS_PER_FULL_ROW = 10
+
 
 COLOR_MAP: dict[str, int] = {
     "cyan": 1,
