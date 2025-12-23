@@ -255,6 +255,31 @@ def is_in_bounds(shape: TetrisBlock) -> bool:
     return True
 
 
+# ----- Manage level & points -----
+
+
+def update_points(context: GameContext, num_cleared_rows: int) -> None:
+
+    factor = 0
+
+    match num_cleared_rows:
+        case 1:
+            factor = 1
+        case 2:
+            factor = 3
+        case 3:
+            factor = 5
+        case 4:
+            factor = 8
+
+    context.points += factor * POINTS_PER_FULL_ROW * (context.level + 1)
+
+
+def update_level(context: GameContext, num_cleared_rows: int) -> None:
+    context.cleared_rows += num_cleared_rows
+    context.level = context.cleared_rows // 10
+
+
 # ----- CLI -----
 
 
@@ -302,8 +327,9 @@ def frame(key: int, context: GameContext) -> None:
         # check for full rows and delete them
         num_deleted_rows = clear_full_rows(context.shapes)
 
-        # add points
-        context.points += num_deleted_rows * POINTS_PER_FULL_ROW
+        # add points and level
+        update_points(context, num_deleted_rows)
+        update_level(context, num_deleted_rows)
 
         # add a new shape
         spawn_shape(context)
@@ -313,10 +339,12 @@ def frame(key: int, context: GameContext) -> None:
 
         # if the new shape collides with any existing shape, the game is over
         if intersects_any(context.shapes):
+            context.points = 0
             context.shapes.clear()
             spawn_shape(context)
-            context.points = 0
             context.game_started = False
+            context.level = 0
+            context.cleared_rows = 0
 
 
 def init_colors() -> None:
@@ -362,8 +390,7 @@ def run_game(stdscr, context: GameContext) -> None:
             frame(key, context)
 
             # update frequency is based on the current number of points
-            cleared_rows = context.points // POINTS_PER_FULL_ROW
-            update_frequency = max(0.1, 1.0 - (cleared_rows // 10) * 0.1)
+            update_frequency = max(0.1, 1.0 - (context.cleared_rows // 10) * 0.1)
 
             if time.time() - last_time >= update_frequency:
                 frame(curses.KEY_DOWN, context)
@@ -448,6 +475,10 @@ def draw(stdscr, context: GameContext) -> None:
         # score
         stdscr.addstr(y_offset, BLOCK_WIDTH * (WIDTH + 3), f"Score: {context.points}")
 
+        # level
+        y_offset += 2
+        stdscr.addstr(y_offset, BLOCK_WIDTH * (WIDTH + 3), f"Level: {context.level}")
+
         # paused
         if context.paused:
             y_offset += 2
@@ -489,7 +520,9 @@ def main() -> None:
         game_started = False,
         shapes = [get_new_shape()],
         next_shape = get_new_shape(),
-        highscore = load_stats().get("highscore", 0)
+        highscore = load_stats().get("highscore", 0),
+        level = 0,
+        cleared_rows = 0
     )
 
     try:

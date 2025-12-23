@@ -49,3 +49,5 @@ class GameContext:
     shapes: list[TetrisBlock]
     next_shape: TetrisBlock
     highscore: int
+    level: int
+    cleared_rows: int
