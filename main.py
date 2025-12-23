@@ -1,6 +1,6 @@
 from constants import WIDTH, HEIGHT, BLOCK_MASKS, BLOCK_COLORS, BLOCK_SYMBOL, BLOCK_WIDTH, COLOR_MAP, \
     POINTS_PER_FULL_ROW
-from custom_types import TetrisBlock, Vector2, BoundingBox, BlockMask, TetrisBlockShape
+from custom_types import TetrisBlock, Vector2, BoundingBox, BlockMask, TetrisBlockShape, GameContext
 import random
 from typing import cast
 import curses
@@ -186,10 +186,10 @@ def get_new_shape() -> TetrisBlock:
     )
 
 
-def spawn_shape(shapes: list[TetrisBlock], next_shape: TetrisBlock) -> TetrisBlock:
+def spawn_shape(context: GameContext) -> None:
     """Adds the next shape to the shapes list and returns a new random shape"""
-    shapes.append(next_shape)
-    return get_new_shape()
+    context.shapes.append(context.next_shape)
+    context.next_shape = get_new_shape()
 
 
 def rotate_shape(mask: BlockMask) -> BlockMask:
@@ -240,7 +240,7 @@ def is_in_bounds(shape: TetrisBlock) -> bool:
 # ----- CLI -----
 
 
-def frame(key: int, shapes: list[TetrisBlock], next_shape: TetrisBlock, points: int) -> tuple[TetrisBlock, int]:
+def frame(key: int, context: GameContext) -> None:
     """
     Handles one frame of the game.
     Moves the current shape depending on the key that was pressed.
@@ -251,9 +251,9 @@ def frame(key: int, shapes: list[TetrisBlock], next_shape: TetrisBlock, points: 
     """
 
     if not key in [curses.KEY_UP, curses.KEY_DOWN, curses.KEY_LEFT, curses.KEY_RIGHT]:
-        return next_shape, points
+        return
 
-    shape = shapes[-1]
+    shape = context.shapes[-1]
 
     # Store the old position and block
     # If the shape gets out of bounds they are used to reset the position
@@ -269,7 +269,7 @@ def frame(key: int, shapes: list[TetrisBlock], next_shape: TetrisBlock, points: 
     out_of_bounds = not is_in_bounds(shape)
 
     # now check for collisions with other shapes
-    collides = intersects_any(shapes)
+    collides = intersects_any(context.shapes)
 
     # The move was illegal if the shape gets out of bounds or collides with any other shape.
     # In this case, reset the position
@@ -278,25 +278,23 @@ def frame(key: int, shapes: list[TetrisBlock], next_shape: TetrisBlock, points: 
         shape.block = old_block
     else:
         # the move was valid and we are done
-        return next_shape, points
+        return
 
     if not left_right_up:
         # check for full rows and delete them
-        num_deleted_rows = clear_full_rows(shapes)
+        num_deleted_rows = clear_full_rows(context.shapes)
 
         # add points
-        points += num_deleted_rows * POINTS_PER_FULL_ROW
+        context.points += num_deleted_rows * POINTS_PER_FULL_ROW
 
         # add a new shape
-        next_shape = spawn_shape(shapes, next_shape)
+        spawn_shape(context)
 
         # if the new shape collides with any existing shape, the game is over
-        if intersects_any(shapes):
-            shapes.clear()
-            next_shape = spawn_shape(shapes, next_shape)
-            points = 0
-
-    return next_shape, points
+        if intersects_any(context.shapes):
+            context.shapes.clear()
+            spawn_shape(context)
+            context.points = 0
 
 
 def init_colors() -> None:
@@ -325,10 +323,7 @@ def run_game(stdscr) -> None:
     init_colors()
     stdscr.timeout(50)  # ensure that stdscr.getch() is not blocking
 
-    points = 0
-    paused = False
-    shapes: list[TetrisBlock] = [get_new_shape()]
-    next_shape = get_new_shape()
+    context = GameContext(0, False, [get_new_shape()], get_new_shape())
     last_time = time.time()
 
     # game loop
@@ -338,20 +333,20 @@ def run_game(stdscr) -> None:
         if key == ord("q"):
             break
         if key == ord("p"):
-            paused = not paused
+            context.paused = not context.paused
 
-        if not paused:
-            next_shape, points = frame(key, shapes, next_shape, points)
+        if not context.paused:
+            frame(key, context)
 
             # update frequency is based on the current number of points
-            cleared_rows = points // POINTS_PER_FULL_ROW
+            cleared_rows = context.points // POINTS_PER_FULL_ROW
             update_frequency = max(0.1, 1.0 - (cleared_rows // 10) * 0.1)
 
             if time.time() - last_time >= update_frequency:
-                next_shape, points = frame(curses.KEY_DOWN, shapes, next_shape, points)
+                frame(curses.KEY_DOWN, context)
                 last_time = time.time()
 
-        draw(stdscr, shapes, next_shape, points, paused)
+        draw(stdscr, context)
         time.sleep(0.01)
 
 
@@ -407,7 +402,7 @@ def draw_shape(stdscr, position: Vector2, block: BlockMask, color: int) -> None:
             )
 
 
-def draw(stdscr, shapes: list[TetrisBlock], next_shape: TetrisBlock, points: int, paused: bool) -> None:
+def draw(stdscr, context: GameContext) -> None:
     """Draws a border box, all shapes and the score."""
     stdscr.erase()
 
@@ -417,14 +412,14 @@ def draw(stdscr, shapes: list[TetrisBlock], next_shape: TetrisBlock, points: int
         draw_borders(stdscr)
 
         # shapes
-        for shape in shapes:
+        for shape in context.shapes:
             draw_shape(stdscr, shape.position, shape.block, shape.color)
 
         # score
-        stdscr.addstr(y_offset, BLOCK_WIDTH * (WIDTH + 3), f"Points: {points}")
+        stdscr.addstr(y_offset, BLOCK_WIDTH * (WIDTH + 3), f"Points: {context.points}")
 
         # paused
-        if paused:
+        if context.paused:
             y_offset += 2
             stdscr.addstr(y_offset, BLOCK_WIDTH * (WIDTH + 3), "Paused...")
 
@@ -435,7 +430,7 @@ def draw(stdscr, shapes: list[TetrisBlock], next_shape: TetrisBlock, points: int
         # next shape: shape
         y_offset += 4
         next_pos = Vector2(WIDTH + 2, HEIGHT - y_offset)
-        draw_shape(stdscr, next_pos, next_shape.block, next_shape.color)
+        draw_shape(stdscr, next_pos, context.next_shape.block, context.next_shape.color)
 
     except curses.error:
         # something is outside the visible area

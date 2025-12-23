@@ -39,3 +39,11 @@ class BoundingBox:
     max_x: int
     min_y: int
     max_y: int
+
+
+@dataclass
+class GameContext:
+    points: int
+    paused: bool
+    shapes: list[TetrisBlock]
+    next_shape: TetrisBlock
