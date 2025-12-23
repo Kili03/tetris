@@ -409,7 +409,7 @@ def draw_shape(stdscr, position: Vector2, block: BlockMask, color: int) -> None:
 
 def draw(stdscr, shapes: list[TetrisBlock], next_shape: TetrisBlock, points: int, paused: bool) -> None:
     """Draws a border box, all shapes and the score."""
-    stdscr.clear()
+    stdscr.erase()
 
     y_offset = 0
 
@@ -441,7 +441,8 @@ def draw(stdscr, shapes: list[TetrisBlock], next_shape: TetrisBlock, points: int
         # something is outside the visible area
         pass
 
-    stdscr.refresh()
+    stdscr.noutrefresh()
+    curses.doupdate()
 
 
 # ----- Run application -----
