@@ -48,3 +48,4 @@ class GameContext:
     game_started: bool
     shapes: list[TetrisBlock]
     next_shape: TetrisBlock
+    highscore: int

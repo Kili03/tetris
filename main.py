@@ -1,5 +1,5 @@
 from constants import WIDTH, HEIGHT, BLOCK_MASKS, BLOCK_COLORS, BLOCK_SYMBOL, BLOCK_WIDTH, COLOR_MAP, \
-    POINTS_PER_FULL_ROW, ARROW_KEYS
+    POINTS_PER_FULL_ROW, ARROW_KEYS, DEFAULT_STATS, BASE_DIR
 from custom_types import TetrisBlock, Vector2, BoundingBox, BlockMask, TetrisBlockShape, GameContext
 import random
 from typing import cast
@@ -7,11 +7,29 @@ import curses
 import time
 import sys
 import traceback
+import copy
+import json
+import os.path
 
 
 def index_bm(x: int, y: int) -> int:
     """Index function for the block mask"""
     return 4 * y + (3 - x)
+
+
+def load_stats() -> dict[str, int]:
+    try:
+        with open(os.path.join(BASE_DIR, "stats.json")) as file:
+            return json.load(file)
+    except FileNotFoundError:
+        return copy.deepcopy(DEFAULT_STATS)
+    except json.JSONDecodeError:
+        return copy.deepcopy(DEFAULT_STATS)
+
+
+def save_stats(stats: dict[str, int]) -> None:
+    with open(os.path.join(BASE_DIR, "stats.json"), "w") as file:
+        json.dump(stats, file)
 
 
 # ----- Collision check -----
@@ -290,6 +308,9 @@ def frame(key: int, context: GameContext) -> None:
         # add a new shape
         spawn_shape(context)
 
+        # update highscore
+        context.highscore = max(context.points, context.highscore)
+
         # if the new shape collides with any existing shape, the game is over
         if intersects_any(context.shapes):
             context.shapes.clear()
@@ -317,14 +338,13 @@ def init_colors() -> None:
     curses.init_pair(COLOR_MAP["white"], curses.COLOR_WHITE, bg)
 
 
-def run_game(stdscr) -> None:
+def run_game(stdscr, context: GameContext) -> None:
     """Main function handling user input"""
 
     curses.curs_set(0)  # disable cursor
     init_colors()
     stdscr.timeout(50)  # ensure that stdscr.getch() is not blocking
 
-    context = GameContext(0, False, False, [get_new_shape()], get_new_shape())
     last_time = time.time()
 
     # game loop
@@ -332,7 +352,7 @@ def run_game(stdscr) -> None:
         key = stdscr.getch()
 
         if key == ord("q"):
-            break
+            quit_game(context)
         if key == ord("p"):
             context.paused = not context.paused
         if key in ARROW_KEYS:
@@ -352,6 +372,13 @@ def run_game(stdscr) -> None:
         draw(stdscr, context)
         time.sleep(0.01)
 
+
+def quit_game(context: GameContext) -> None:
+    """Exits the game and saves the highscore"""
+    save_stats({
+        "highscore": context.highscore
+    })
+    sys.exit(0)
 
 # ----- Draw functions -----
 
@@ -419,16 +446,21 @@ def draw(stdscr, context: GameContext) -> None:
             draw_shape(stdscr, shape.position, shape.block, shape.color)
 
         # score
-        stdscr.addstr(y_offset, BLOCK_WIDTH * (WIDTH + 3), f"Points: {context.points}")
+        stdscr.addstr(y_offset, BLOCK_WIDTH * (WIDTH + 3), f"Score: {context.points}")
 
         # paused
         if context.paused:
             y_offset += 2
             stdscr.addstr(y_offset, BLOCK_WIDTH * (WIDTH + 3), "Paused...")
 
+        # game_started
         if not context.game_started:
             y_offset += 2
             stdscr.addstr(y_offset, BLOCK_WIDTH * (WIDTH + 3), "Press an arrow key to start!")
+
+        # highscore
+        y_offset += 2
+        stdscr.addstr(y_offset, BLOCK_WIDTH * (WIDTH + 3), f"Highscore: {context.highscore}")
 
         # next shape: title
         y_offset += 2
@@ -451,11 +483,20 @@ def draw(stdscr, context: GameContext) -> None:
 
 
 def main() -> None:
+    context = GameContext(
+        points = 0,
+        paused = False,
+        game_started = False,
+        shapes = [get_new_shape()],
+        next_shape = get_new_shape(),
+        highscore = load_stats().get("highscore", 0)
+    )
+
     try:
-        curses.wrapper(run_game)
+        curses.wrapper(run_game, context)
 
     except KeyboardInterrupt:
-        sys.exit(0)
+        quit_game(context)
 
     except Exception as e:
         print(e)
