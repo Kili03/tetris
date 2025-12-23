@@ -1,4 +1,5 @@
 from custom_types import BlockMask, TetrisBlockShape
+import curses
 
 # WIDTH and HEIGHT must be odd
 WIDTH = 13
@@ -9,6 +10,7 @@ BLOCK_WIDTH = 2
 
 POINTS_PER_FULL_ROW = 10
 
+ARROW_KEYS = [curses.KEY_UP, curses.KEY_DOWN, curses.KEY_LEFT, curses.KEY_RIGHT]
 
 COLOR_MAP: dict[str, int] = {
     "cyan": 1,

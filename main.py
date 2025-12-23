@@ -1,5 +1,5 @@
 from constants import WIDTH, HEIGHT, BLOCK_MASKS, BLOCK_COLORS, BLOCK_SYMBOL, BLOCK_WIDTH, COLOR_MAP, \
-    POINTS_PER_FULL_ROW
+    POINTS_PER_FULL_ROW, ARROW_KEYS
 from custom_types import TetrisBlock, Vector2, BoundingBox, BlockMask, TetrisBlockShape, GameContext
 import random
 from typing import cast
@@ -250,7 +250,7 @@ def frame(key: int, context: GameContext) -> None:
     Returns the next shape and the number of points
     """
 
-    if not key in [curses.KEY_UP, curses.KEY_DOWN, curses.KEY_LEFT, curses.KEY_RIGHT]:
+    if not key in ARROW_KEYS:
         return
 
     shape = context.shapes[-1]
@@ -295,6 +295,7 @@ def frame(key: int, context: GameContext) -> None:
             context.shapes.clear()
             spawn_shape(context)
             context.points = 0
+            context.game_started = False
 
 
 def init_colors() -> None:
@@ -323,7 +324,7 @@ def run_game(stdscr) -> None:
     init_colors()
     stdscr.timeout(50)  # ensure that stdscr.getch() is not blocking
 
-    context = GameContext(0, False, [get_new_shape()], get_new_shape())
+    context = GameContext(0, False, False, [get_new_shape()], get_new_shape())
     last_time = time.time()
 
     # game loop
@@ -334,8 +335,10 @@ def run_game(stdscr) -> None:
             break
         if key == ord("p"):
             context.paused = not context.paused
+        if key in ARROW_KEYS:
+            context.game_started = True
 
-        if not context.paused:
+        if not context.paused and context.game_started:
             frame(key, context)
 
             # update frequency is based on the current number of points
@@ -422,6 +425,10 @@ def draw(stdscr, context: GameContext) -> None:
         if context.paused:
             y_offset += 2
             stdscr.addstr(y_offset, BLOCK_WIDTH * (WIDTH + 3), "Paused...")
+
+        if not context.game_started:
+            y_offset += 2
+            stdscr.addstr(y_offset, BLOCK_WIDTH * (WIDTH + 3), "Press an arrow key to start!")
 
         # next shape: title
         y_offset += 2

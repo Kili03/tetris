@@ -45,5 +45,6 @@ class BoundingBox:
 class GameContext:
     points: int
     paused: bool
+    game_started: bool
     shapes: list[TetrisBlock]
     next_shape: TetrisBlock
