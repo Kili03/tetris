@@ -18,6 +18,7 @@ def index_bm(x: int, y: int) -> int:
 
 
 def load_stats() -> dict[str, int]:
+    """Loads the stats dictionary from the corresponding json file"""
     try:
         with open(os.path.join(BASE_DIR, "stats.json")) as file:
             return json.load(file)
@@ -28,6 +29,7 @@ def load_stats() -> dict[str, int]:
 
 
 def save_stats(stats: dict[str, int]) -> None:
+    """Saves the stats dictionary to the corresponding json file"""
     with open(os.path.join(BASE_DIR, "stats.json"), "w") as file:
         json.dump(stats, file)
 
@@ -205,7 +207,7 @@ def get_new_shape() -> TetrisBlock:
 
 
 def spawn_shape(context: GameContext) -> None:
-    """Adds the next shape to the shapes list and returns a new random shape"""
+    """Adds the next shape to the shapes list and updates next_shape"""
     context.shapes.append(context.next_shape)
     context.next_shape = get_new_shape()
 
@@ -222,7 +224,7 @@ def rotate_shape(mask: BlockMask) -> BlockMask:
     return cast(BlockMask, tuple(result))
 
 
-def move_shape(shape: TetrisBlock, key: int):
+def move_shape(shape: TetrisBlock, key: int) -> None:
     """Moves a shape depending on the key that was pressed"""
 
     match key:
@@ -259,6 +261,10 @@ def is_in_bounds(shape: TetrisBlock) -> bool:
 
 
 def update_points(context: GameContext, num_cleared_rows: int) -> None:
+    """
+    Updates the points depending on the number of cleared rows.
+    The player is rewarded for clearing multiple rows at a time.
+    """
 
     factor = 0
 
@@ -276,6 +282,8 @@ def update_points(context: GameContext, num_cleared_rows: int) -> None:
 
 
 def update_level(context: GameContext, num_cleared_rows: int) -> None:
+    """Updates the level based on the number of cleared rows"""
+
     context.cleared_rows += num_cleared_rows
     context.level = context.cleared_rows // 10
 
@@ -283,14 +291,23 @@ def update_level(context: GameContext, num_cleared_rows: int) -> None:
 # ----- CLI -----
 
 
+def reset_game(context: GameContext) -> None:
+    """Resets the game if the player loses."""
+    context.points = 0
+    context.shapes.clear()
+    spawn_shape(context)
+    context.game_started = False
+    context.level = 0
+    context.cleared_rows = 0
+
+
 def frame(key: int, context: GameContext) -> None:
     """
     Handles one frame of the game.
     Moves the current shape depending on the key that was pressed.
-    Valides the movement to ensure the shape does not get out of bounds or overlaps with other shapes
-    Handles full rows and updates the points
-
-    Returns the next shape and the number of points
+    Valides the movement to ensure the shape does not get out of bounds or overlaps with other shapes.
+    Handles full rows and updates the points.
+    Resets the game if the player loses.
     """
 
     if not key in ARROW_KEYS:
@@ -339,12 +356,7 @@ def frame(key: int, context: GameContext) -> None:
 
         # if the new shape collides with any existing shape, the game is over
         if intersects_any(context.shapes):
-            context.points = 0
-            context.shapes.clear()
-            spawn_shape(context)
-            context.game_started = False
-            context.level = 0
-            context.cleared_rows = 0
+            reset_game(context)
 
 
 def init_colors() -> None:
