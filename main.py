@@ -305,7 +305,7 @@ def frame(key: int, context: GameContext) -> None:
     """
     Handles one frame of the game.
     Moves the current shape depending on the key that was pressed.
-    Valides the movement to ensure the shape does not get out of bounds or overlaps with other shapes.
+    Validates the movement to ensure the shape does not get out of bounds or overlaps with other shapes.
     Handles full rows and updates the points.
     Resets the game if the player loses.
     """
@@ -490,6 +490,10 @@ def draw(stdscr, context: GameContext) -> None:
         # level
         y_offset += 2
         stdscr.addstr(y_offset, BLOCK_WIDTH * (WIDTH + 3), f"Level: {context.level}")
+
+        # cleared rows
+        y_offset += 2
+        stdscr.addstr(y_offset, BLOCK_WIDTH * (WIDTH + 3), f"Cleared rows: {context.cleared_rows}")
 
         # paused
         if context.paused:
